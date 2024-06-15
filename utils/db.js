@@ -1,5 +1,4 @@
 import { MongoClient } from 'mongodb';
-import { promisify } from 'util';
 
 class DBClient {
   constructor() {
@@ -15,20 +14,37 @@ class DBClient {
     });
   }
 
-  isAlive() {
-    return this.client && this.client.isConnected();
+  async isAlive() {
+    try {
+      const db = this.client.db(this.dbName);
+      await db.command({ ping: 1 });
+      return true;
+    } catch (err) {
+      console.error('MongoDB isAlive error:', err);
+      return false;
+    }
   }
 
   async nbUsers() {
-    const db = this.client.db(this.dbName);
-    const usersCollection = db.collection('users');
-    return usersCollection.countDocuments();
+    try {
+      const db = this.client.db(this.dbName);
+      const usersCollection = db.collection('users');
+      return usersCollection.countDocuments();
+    } catch (err) {
+      console.error('MongoDB nbUsers error:', err);
+      return 0;
+    }
   }
 
   async nbFiles() {
-    const db = this.client.db(this.dbName);
-    const filesCollection = db.collection('files');
-    return filesCollection.countDocuments();
+    try {
+      const db = this.client.db(this.dbName);
+      const filesCollection = db.collection('files');
+      return filesCollection.countDocuments();
+    } catch (err) {
+      console.error('MongoDB nbFiles error:', err);
+      return 0;
+    }
   }
 }
 
