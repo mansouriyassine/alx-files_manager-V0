@@ -9,6 +9,10 @@ class RedisClient {
       console.error(`Redis client error: ${err}`);
     });
 
+    this.client.on('connect', () => {
+      console.log('Redis client connected');
+    });
+
     this.get = promisify(this.client.get).bind(this.client);
     this.set = promisify(this.client.set).bind(this.client);
     this.del = promisify(this.client.del).bind(this.client);

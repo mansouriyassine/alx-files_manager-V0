@@ -5,9 +5,16 @@ const dbName = 'files_manager';
 class DBClient {
   constructor() {
     this.client = new MongoClient(url, { useNewUrlParser: true, useUnifiedTopology: true });
-    this.client.connect().then(() => {
-      this.db = this.client.db(dbName);
-    });
+    this.db = null;
+
+    this.client.connect()
+      .then(() => {
+        this.db = this.client.db(dbName);
+        console.log('MongoDB connected');
+      })
+      .catch(err => {
+        console.error('Error connecting to MongoDB:', err.message);
+      });
   }
 
   isAlive() {
@@ -15,11 +22,23 @@ class DBClient {
   }
 
   async nbUsers() {
-    return this.db.collection('users').countDocuments();
+    try {
+      const count = await this.db.collection('users').countDocuments();
+      return count;
+    } catch (error) {
+      console.error('Error counting users:', error.message);
+      return -1;
+    }
   }
 
   async nbFiles() {
-    return this.db.collection('files').countDocuments();
+    try {
+      const count = await this.db.collection('files').countDocuments();
+      return count;
+    } catch (error) {
+      console.error('Error counting files:', error.message);
+      return -1;
+    }
   }
 }
 
