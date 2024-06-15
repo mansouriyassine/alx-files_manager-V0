@@ -1,58 +1,50 @@
 const Bull = require('bull');
-const imageThumbnail = require('image-thumbnail');
-const path = require('path');
-const fs = require('fs');
-const redisClient = require('./utils/redis');
-const dbClient = require('./utils/db');
+const Queue = require('bull');
+const User = require('./models/User');
+const nodemailer = require('nodemailer');
 
-const fileQueue = new Bull('fileQueue');
+const userQueue = new Queue('userQueue');
 
-fileQueue.process(async (job) => {
-  const { fileId, userId } = job.data;
-
-  if (!fileId) {
-    throw new Error('Missing fileId');
-  }
+userQueue.process(async (job) => {
+  const { userId } = job.data;
 
   if (!userId) {
     throw new Error('Missing userId');
   }
 
-  const db = dbClient.getDB();
-  const file = await db
-    .collection('files')
-    .findOne({ _id: db.ObjectId(fileId), userId: db.ObjectId(userId) });
-
-  if (!file) {
-    throw new Error('File not found');
+  // Fetch user from database
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new Error('User not found');
   }
 
-  const originalFilePath = path.join('/tmp/files_manager', fileId);
-  if (!fs.existsSync(originalFilePath)) {
-    throw new Error('File not found');
-  }
+  // Simulate sending welcome email
+  console.log(`Welcome ${user.email}!`);
 
-  try {
-    await Promise.all([
-      imageThumbnail(originalFilePath, { width: 500, height: 500, responseType: 'base64' })
-        .then((thumbnail) => {
-          const thumbnailPath = `${originalFilePath}_500`;
-          fs.writeFileSync(thumbnailPath, Buffer.from(thumbnail, 'base64'));
-        }),
-      imageThumbnail(originalFilePath, { width: 250, height: 250, responseType: 'base64' })
-        .then((thumbnail) => {
-          const thumbnailPath = `${originalFilePath}_250`;
-          fs.writeFileSync(thumbnailPath, Buffer.from(thumbnail, 'base64'));
-        }),
-      imageThumbnail(originalFilePath, { width: 100, height: 100, responseType: 'base64' })
-        .then((thumbnail) => {
-          const thumbnailPath = `${originalFilePath}_100`;
-          fs.writeFileSync(thumbnailPath, Buffer.from(thumbnail, 'base64'));
-        }),
-    ]);
-  } catch (err) {
-    console.error('Error generating thumbnails:', err);
-  }
+  // In a real application, you would use a service like Mailgun to send the email
+  // Example using nodemailer for sending email
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: 'your-email@gmail.com',
+      pass: 'your-password'
+    }
+  });
+
+  const mailOptions = {
+    from: 'your-email@gmail.com',
+    to: user.email,
+    subject: 'Welcome to our application!',
+    text: `Dear ${user.email},\n\nWelcome to our application! We are excited to have you with us.\n\nBest regards,\nThe Application Team`
+  };
+
+  transporter.sendMail(mailOptions, function(error, info){
+    if (error) {
+      console.error('Error sending email:', error);
+    } else {
+      console.log('Email sent: ' + info.response);
+    }
+  });
 });
 
 console.log('Worker started');

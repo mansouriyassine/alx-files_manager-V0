@@ -3,6 +3,8 @@ const AppController = require('../controllers/AppController');
 const AuthController = require('../controllers/AuthController');
 const UserController = require('../controllers/UserController');
 const FilesController = require('../controllers/FilesController');
+const Queue = require('bull');
+const userQueue = new Queue('userQueue');
 
 const router = express.Router();
 
@@ -11,6 +13,7 @@ router.get('/stats', AppController.getStats);
 router.get('/connect', AuthController.getConnect);
 router.get('/disconnect', AuthController.getDisconnect);
 router.get('/users/me', UserController.getMe);
+router.post('/users', UserController.postUser);
 
 router.get('/files/:id', FilesController.getShow);
 router.get('/files', FilesController.getIndex);
