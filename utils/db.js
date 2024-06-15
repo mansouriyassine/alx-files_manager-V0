@@ -9,13 +9,21 @@ class DBClient {
 
     this.client = new MongoClient(url, { useUnifiedTopology: true });
     this.dbName = database;
-    this.client.connect().catch((err) => {
-      console.error('MongoDB connection error:', err);
-    });
+    this.connected = false;
+
+    this.client.connect()
+      .then(() => {
+        this.connected = true;
+        console.log('Connected to MongoDB');
+      })
+      .catch((err) => {
+        console.error('MongoDB connection error:', err);
+      });
   }
 
   async isAlive() {
     try {
+      if (!this.connected) throw new Error('Not connected to MongoDB');
       const db = this.client.db(this.dbName);
       await db.command({ ping: 1 });
       return true;
@@ -27,6 +35,7 @@ class DBClient {
 
   async nbUsers() {
     try {
+      if (!this.connected) throw new Error('Not connected to MongoDB');
       const db = this.client.db(this.dbName);
       const usersCollection = db.collection('users');
       return usersCollection.countDocuments();
@@ -38,6 +47,7 @@ class DBClient {
 
   async nbFiles() {
     try {
+      if (!this.connected) throw new Error('Not connected to MongoDB');
       const db = this.client.db(this.dbName);
       const filesCollection = db.collection('files');
       return filesCollection.countDocuments();
