@@ -42,7 +42,7 @@ class DBClient {
       return;
     }
 
-    return new Promise((resolve, reject) => {
+    await new Promise((resolve, reject) => {
       this.client.once('connect', resolve);
       this.client.once('error', reject);
     });
