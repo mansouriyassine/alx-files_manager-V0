@@ -1,20 +1,29 @@
-const redisClient = require('../utils/redis');
-const dbClient = require('../utils/db');
+import dbClient from '../utils/db';
+import redisClient from '../utils/redis';
 
-class AppController {
-  static async getStatus(req, res) {
-    const redisStatus = await redisClient.isAlive();
+const AppController = {
+  async getStatus(req, res) {
+    const redisStatus = redisClient.isAlive();
     const dbStatus = await dbClient.isAlive();
 
-    res.status(200).json({ redis: redisStatus, db: dbStatus });
-  }
+    if (redisStatus && dbStatus) {
+      res.status(200).json({ redis: true, db: true });
+    } else {
+      res.status(500).json({ redis: false, db: false });
+    }
+  },
 
-  static async getStats(req, res) {
-    const usersCount = await dbClient.nbUsers();
-    const filesCount = await dbClient.nbFiles();
+  async getStats(req, res) {
+    try {
+      const usersCount = await dbClient.nbUsers();
+      const filesCount = await dbClient.nbFiles();
 
-    res.status(200).json({ users: usersCount, files: filesCount });
-  }
-}
+      res.status(200).json({ users: usersCount, files: filesCount });
+    } catch (err) {
+      console.error(`Error getting stats: ${err}`);
+      res.status(500).json({ error: 'Error getting stats' });
+    }
+  },
+};
 
-module.exports = AppController;
+export default AppController;
