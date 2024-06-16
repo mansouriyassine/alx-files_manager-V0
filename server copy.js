@@ -1,18 +1,12 @@
 import dotenv from 'dotenv';
-import { createRequire } from 'module';
-
-const require = createRequire(import.meta.url);
-dotenv.config({ path: require.resolve('.env') });
-
 import express from 'express';
-import AppController from './controllers/AppController.js';
 import routes from './routes/index.js';
+
+// Load environment variables from .env file
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-
-// Middleware
-app.use(express.json());
 
 // Load all routes
 app.use('/', routes);

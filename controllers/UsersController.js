@@ -1,50 +1,52 @@
-const redisClient = require('../utils/redis');
-const dbClient = require('../utils/db');
-const Queue = require('bull');
-const userQueue = new Queue('userQueue');
+import sha1 from 'sha1';
+import { v4 as uuidv4 } from 'uuid';
+import { getClient } from '../utils/db.js';
 
-class UserController {
-  static async getMe(req, res) {
-    const token = req.headers['x-token'];
-    if (!token) {
-      return res.status(401).json({ error: 'Unauthorized' });
+const UsersController = {
+  async postNew(req, res) {
+    const { email, password } = req.body;
+
+    // Check if email or password are missing
+    if (!email) {
+      return res.status(400).json({ error: 'Missing email' });
+    }
+    if (!password) {
+      return res.status(400).json({ error: 'Missing password' });
     }
 
-    const userId = await redisClient.get(`auth_${token}`);
-    if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+    const client = await getClient();
+    const db = client.db();
+    const usersCollection = db.collection('users');
+
+    // Check if the email already exists
+    const existingUser = await usersCollection.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ error: 'Already exist' });
     }
 
+    // Hash the password
+    const hashedPassword = sha1(password);
+
+    // Create the new user object
+    const newUser = {
+      email,
+      password: hashedPassword,
+      id: uuidv4(),
+    };
+
+    // Insert the new user into the database
     try {
-      const user = await dbClient.db.collection('users').findOne({ _id: dbClient.ObjectId(userId) });
-      if (!user) {
-        return res.status(401).json({ error: 'Unauthorized' });
-      }
-
-      return res.status(200).json({ id: user._id, email: user.email });
-    } catch (error) {
-      console.error('Error fetching user:', error);
-      return res.status(500).json({ error: 'Internal Server Error' });
-    }
-  }
-
-  static async postUser(req, res) {
-    try {
-      const { email, password } = req.body;
-
-      // Create user in the database
-      const newUser = new User({ email, password });
-      await newUser.save();
-
-      // Queue job to send welcome email
-      await userQueue.add({ userId: newUser._id });
-
-      res.status(201).json(newUser);
+      const result = await usersCollection.insertOne(newUser);
+      const insertedUser = {
+        id: result.insertedId,
+        email: newUser.email,
+      };
+      return res.status(201).json(insertedUser);
     } catch (err) {
-      console.error('Error creating user:', err);
-      res.status(500).json({ error: 'Failed to create user' });
+      console.error('Error inserting user:', err);
+      return res.status(500).json({ error: 'Server error' });
     }
-  }
-}
+  },
+};
 
-module.exports = UserController;
+export default UsersController;

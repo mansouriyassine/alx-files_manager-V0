@@ -1,4 +1,4 @@
-import { MongoClient } from 'mongodb';
+const { MongoClient } = require('mongodb');
 
 class DBClient {
   constructor() {
@@ -7,31 +7,21 @@ class DBClient {
     const database = process.env.DB_DATABASE || 'files_manager';
     const url = `mongodb://${host}:${port}`;
 
-    this.client = new MongoClient(url, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      connectTimeoutMS: 3000, // Timeout after 3 seconds
-      serverSelectionTimeoutMS: 5000, // Timeout after 5 seconds
-    });
-
+    this.client = new MongoClient(url, { useNewUrlParser: true, useUnifiedTopology: true });
     this.dbName = database;
     this.connected = false;
 
-    this.connect();
+    this.client.connect()
+      .then(() => {
+        this.connected = true;
+        console.log('MongoDB client connected to the server');
+      })
+      .catch((err) => {
+        console.error(`MongoDB client connection error: ${err}`);
+      });
   }
 
-  async connect() {
-    try {
-      await this.client.connect();
-      this.connected = true;
-      console.log('MongoDB client connected to the server');
-    } catch (err) {
-      console.error(`MongoDB client connection error: ${err}`);
-      throw err;
-    }
-  }
-
-  async isAlive() {
+  isAlive() {
     return this.connected;
   }
 
@@ -60,4 +50,4 @@ class DBClient {
 }
 
 const dbClient = new DBClient();
-export default dbClient;
+module.exports = dbClient;
