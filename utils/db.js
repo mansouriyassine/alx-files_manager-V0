@@ -1,46 +1,53 @@
-const { MongoClient, ObjectId } = require('mongodb');
-const url = 'mongodb://localhost:27017';
-const dbName = 'files_manager';
+const { MongoClient } = require('mongodb');
 
 class DBClient {
   constructor() {
+    const host = process.env.DB_HOST || 'localhost';
+    const port = process.env.DB_PORT || 27017;
+    const database = process.env.DB_DATABASE || 'files_manager';
+    const url = `mongodb://${host}:${port}`;
+
     this.client = new MongoClient(url, { useNewUrlParser: true, useUnifiedTopology: true });
-    this.db = null;
+    this.dbName = database;
+    this.connected = false;
 
     this.client.connect()
       .then(() => {
-        this.db = this.client.db(dbName);
-        console.log('MongoDB connected');
+        this.connected = true;
+        console.log('MongoDB client connected to the server');
       })
-      .catch(err => {
-        console.error('Error connecting to MongoDB:', err.message);
+      .catch((err) => {
+        console.error(`MongoDB client connection error: ${err}`);
       });
   }
 
   isAlive() {
-    return this.client.isConnected();
+    return this.connected;
   }
 
   async nbUsers() {
-    try {
-      const count = await this.db.collection('users').countDocuments();
-      return count;
-    } catch (error) {
-      console.error('Error counting users:', error.message);
-      return -1;
-    }
+    await this.ensureConnection();
+    const db = this.client.db(this.dbName);
+    return db.collection('users').countDocuments();
   }
 
   async nbFiles() {
-    try {
-      const count = await this.db.collection('files').countDocuments();
-      return count;
-    } catch (error) {
-      console.error('Error counting files:', error.message);
-      return -1;
+    await this.ensureConnection();
+    const db = this.client.db(this.dbName);
+    return db.collection('files').countDocuments();
+  }
+
+  async ensureConnection() {
+    if (this.connected) {
+      return;
     }
+
+    return new Promise((resolve, reject) => {
+      this.client.once('connect', resolve);
+      this.client.once('error', reject);
+    });
   }
 }
 
 const dbClient = new DBClient();
-module.exports = { dbClient, ObjectId };
+module.exports = dbClient;
