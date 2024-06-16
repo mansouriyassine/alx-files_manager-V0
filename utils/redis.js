@@ -3,20 +3,27 @@ import { createClient } from 'redis';
 class RedisClient {
   constructor() {
     this.client = createClient();
-    this.client.on('error', (err) => {
-      console.error(`Redis client not connected to the server: ${err.message}`);
-    });
+    this.connected = false;
+    this.readyPromise = new Promise((resolve, reject) => {
+      this.client.on('error', (err) => {
+        console.error(`Redis client not connected to the server: ${err.message}`);
+        reject(err);
+      });
 
-    this.client.on('connect', () => {
-      console.log('Redis client connected to the server');
+      this.client.on('connect', () => {
+        console.log('Redis client connected to the server');
+        this.connected = true;
+        resolve();
+      });
     });
   }
 
   isAlive() {
-    return this.client.connected;
+    return this.connected;
   }
 
   async get(key) {
+    await this.readyPromise;
     return new Promise((resolve, reject) => {
       this.client.get(key, (err, reply) => {
         if (err) {
@@ -29,6 +36,7 @@ class RedisClient {
   }
 
   async set(key, value, duration) {
+    await this.readyPromise;
     return new Promise((resolve, reject) => {
       this.client.setex(key, duration, value, (err, reply) => {
         if (err) {
@@ -41,6 +49,7 @@ class RedisClient {
   }
 
   async del(key) {
+    await this.readyPromise;
     return new Promise((resolve, reject) => {
       this.client.del(key, (err, reply) => {
         if (err) {
