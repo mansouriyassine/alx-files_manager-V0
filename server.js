@@ -1,19 +1,20 @@
-const express = require('express');
-const dotenv = require('dotenv');
-const routes = require('./routes/index');
+import dotenv from 'dotenv';
+import { createRequire } from 'module';
 
-dotenv.config();
+const require = createRequire(import.meta.url);
+dotenv.config({ path: require.resolve('.env') });
+
+import express from 'express';
+import AppController from './controllers/AppController.js';
+import routes from './routes/index.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
-app.use(express.json());
-
-// Routes
+// Load all routes
 app.use('/', routes);
 
-// Start server
+// Start the server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
